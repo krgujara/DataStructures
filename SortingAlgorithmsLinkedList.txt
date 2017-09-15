@@ -1,0 +1,203 @@
+﻿//HW1
+//Implement the three member functions of linked_list class: selection sort, insertion sort 
+//and bubble sort as described in the code blow
+//Due: 11:59pm, Friday, September 15
+//Submit a text vesion of your program to blackboard
+// LinkedList creation code by Roger Chen
+
+/////////////////////////////////////////////////////////////////////////////////
+// Author - Komal Gujarathi						       // 	
+// Sorting Algorithms   						       //	
+// Version - 1.0.							       //
+/////////////////////////////////////////////////////////////////////////////////
+
+#include <fstream>
+#include <iostream>
+//#include <time.h>
+using namespace std;
+
+ofstream out("data1.txt");
+
+class node {
+public:
+	int value;
+	node * next;
+	node() { next = nullptr; }
+	node(int k) { value = k; next = nullptr; }
+};
+
+class linked_list {
+public:
+	int num_nodes;
+	node * head;
+	linked_list() { num_nodes = 0; head = nullptr; }
+	void make_random_list(int k);//create a linked list of 
+								 //k nodes with values in 0 ..99 randomly
+
+	void new_make_random_list(int k, int m);//create a linked list of 
+											//k nodes with values in 0 .. m randomly
+
+	void print(); //Print values of all nodes from head node
+
+
+
+	void selection_sort(); //Sort the nodes, based on ascending order of node values
+
+
+	void bubble_sort();
+	void insertion_sort();
+	void reverse(); //Reverse the order of nodes of linked list	
+
+
+};
+void linked_list::make_random_list(int k) {
+	node * p;
+	for (int i = 0; i < k; i++) {
+		p = new node(rand() % 100);
+		p->next = head;
+		head = p;
+		num_nodes++;
+	}
+
+}
+
+void linked_list::new_make_random_list(int k, int m) {
+	node * p;
+	for (int i = 0; i < k; i++) {
+		p = new node(rand() % m);
+		p->next = head;
+		head = p;
+		num_nodes++;
+	}
+
+}
+
+
+
+void linked_list::print() {
+	node * p = head;
+	out << endl;
+	while (p != nullptr) {
+		out << p->value << " ";
+		p = p->next;
+	}
+}
+void linked_list::reverse() {
+	if (num_nodes <= 1) return;
+	node * p1 = head, *p2 = head->next, *p3;
+	while (p2 != nullptr) {
+		p3 = p2->next;
+		p2->next = p1;
+		if (p1 == head) p1->next = nullptr;
+		p1 = p2;
+		p2 = p3;
+	}
+	head = p1;
+}
+
+/*----------- < Selection Sort> -------------*/
+void linked_list::selection_sort() {
+	node * current = head;
+	node * remaining_list_pointer;
+
+	while (current != nullptr)
+	{
+		// keep selecting the element and swap it with the smallest element each time
+		node*min_pointer = current;
+		remaining_list_pointer = current->next;
+		while (remaining_list_pointer != nullptr)
+		{
+			if (min_pointer->value > remaining_list_pointer->value)
+			{
+				min_pointer = remaining_list_pointer;
+			}
+			remaining_list_pointer = remaining_list_pointer->next;
+		}
+		if (min_pointer != current)
+		{
+			int temp = min_pointer->value;
+			min_pointer->value = current->value;
+			current->value = temp;
+		}
+		current = current->next;
+	}
+
+
+}
+
+//*———————< Bubble sort Function >———————*/
+void linked_list::bubble_sort() {
+
+	node* current;
+	int temp;
+	for (int i = 0; i<num_nodes; i++)
+	{
+		current = head;
+		for (int j = 0; j < num_nodes - i - 1; j++)
+		{
+			// comparing adjacent elements
+
+			if (current->value > current->next->value)
+			{
+				temp = current->value;
+				current->value = current->next->value;
+				current->next->value = temp;
+			}
+			current = current->next;
+		}
+	}
+}
+/*---------< Insertion Sort >-------------*/
+void linked_list::insertion_sort() {
+	node * current = head;
+	node *insertionptr = head;
+	// choose one element at each time and insert it into its correct positino
+	while (current != nullptr)
+	{
+		insertionptr = head;
+		while (insertionptr != current)
+		{
+			if (insertionptr->value > current->value)
+			{
+				int temp = current->value;
+				current->value = insertionptr->value;
+				insertionptr->value = temp;
+			}
+			insertionptr = insertionptr->next;
+		}
+		current = current->next;
+
+	}
+}
+
+int main() {
+
+	//Some examples of tests for your program are given below
+	//During grading, other test cases will also be used
+
+	linked_list L1;
+	L1.make_random_list(70);
+	L1.print();
+	L1.bubble_sort();
+	L1.print();
+
+	cout << endl;
+
+	linked_list L2;
+	L2.make_random_list(70);
+	L2.print();
+	L2.selection_sort();
+	L2.print();
+
+	cout << endl;
+
+	linked_list L3;
+	L3.make_random_list(70);
+	L3.print();
+	L3.insertion_sort();
+	L3.print();
+
+	out.close();
+	return 0;
+
+}
