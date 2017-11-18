@@ -1,0 +1,636 @@
+//HW6  AVL Tree
+//Due: Saturday (Nov. 18) at 11:59PM
+
+
+#include <iostream> //to use cout
+#include <algorithm> //to use max function such as  i = max(a, b);
+
+using namespace std;
+
+//You need to use the following node class for each node of the AVL tree
+class node {
+public:
+	int value;
+	int height;
+	int child; //0: this node is a left child of its parent; 1: right child; -1 this node is the tree root
+	node * parent;
+	node * l_child;
+	node * r_child;
+	node() {}
+	node(int i) { value = i; height = 1; parent = l_child = r_child = nullptr; }
+};
+
+class avl_tree {
+public:
+	node * root;
+	avl_tree() {
+		root = nullptr;
+	}
+	void add_node(int i);//You need to implement this.
+	void in_order_traversal(node *p);  //provided.
+	node * height_adjustment(node *p, int &pattern); //You need to implement this
+													 /*
+													 This function is invoked by add_node and remove_node.
+													 p points to the first node that we need to check for possible height update.  We then need to check possible height update toward root.
+													 All nodes whose heights need to be updated will be performed in this function.
+													 If no imbalance is detected, the function returns nullptr.
+													 If an imbalance is detected, the funciton returns the address of Action Node.
+													 In addition, value of pattern will be set to 1, 2, 3, 4 for LL, LR, RL, RR pattern, respectively.
+													 */
+
+
+
+	void L_Rotate(node *p); //You need to implement this.
+							//p points to the node around which the rotation will be performed.
+							//p is not the action node
+
+	void R_Rotate(node *p); //You need to implement this.
+							//p points to the node around which the rotation will be performed.
+
+	void remove_node(int i);// You need to implement this.
+							//Remove the node with value i.  Assume that all node values are distinct.
+
+	node* max_value_node(node* nodeptr); // called by the remove_node to find out the inorder predecessor
+	node * replace(node * p1);
+	/*
+	This funciton is invoked by the remove_node.
+	p1 points to the node to be removed.  The function returns the first node we need to check for possible height update after a node replcement.
+
+	*/
+	int get_balance(node *n);
+	int height(node *n);
+	
+};
+
+
+// utility function to get the balance (difference of heights of left and right children of a given noce)
+int avl_tree::get_balance(node* n)
+{
+	if (n == nullptr)
+		return 0;
+	return height(n->l_child) - height(n->r_child);
+}
+
+// utility function to get the height of the tree
+int avl_tree::height(node*n)
+{
+	if (n == nullptr)
+		return 0;
+	return n->height;
+}
+
+
+
+void avl_tree::in_order_traversal(node * p) {
+	if (p == nullptr)  return;
+	in_order_traversal(p->l_child);
+	cout << "value = " << p->value << " " << "height = " << p->height << "   ";
+	cout << "child =  " << p->child << endl;
+	in_order_traversal(p->r_child);
+}
+
+void avl_tree::add_node(int i)
+{
+	/* 1. Perform the normal BST Insertion iteratively*/
+	node* newnode = new node(i);
+	if (root == nullptr)
+	{
+		root = newnode;
+		root->child = -1;
+		return;
+	}
+	node *parent = nullptr, *current = root;
+
+	while (current != nullptr)
+	{
+		parent = current;
+		if (i < current->value)
+		{
+			current = current->l_child;
+		}
+		else if (i > current->value)
+		{
+			current = current->r_child;
+		}
+		else // overwrite duplicate 
+		{
+			current->value = i;
+			return;
+		}
+	}
+	if (i < parent->value)
+	{
+		parent->l_child = newnode;
+		newnode->child = 0;
+		newnode->parent = parent;
+	}
+	else
+	{
+		parent->r_child = newnode;
+		newnode->child = 1;
+		newnode->parent = parent;
+	}
+
+	
+	/* 2. Update height */
+	while (newnode != root->parent)
+	{
+		newnode->height = max(height(newnode->l_child), height(newnode->r_child)) + 1;
+		int pattern = 0;
+		node* actionnode = height_adjustment(newnode, pattern);
+		if (actionnode != nullptr)
+		{
+			//cout << "\n Pattern : " << pattern << " for action node " << actionnode->value << " of height " << actionnode->height <<"\n";
+
+			if (pattern == 1)
+			{
+				R_Rotate(actionnode);
+				//cout << "LL";
+			}
+			else if (pattern == 2)
+			{
+				L_Rotate(actionnode->l_child);
+				R_Rotate(actionnode);
+				//cout << "LR";
+			}
+			else if (pattern == 3)
+			{
+				R_Rotate(actionnode->r_child);	
+				L_Rotate(actionnode);
+				//cout << "RL";
+			}
+			else if (pattern == 4)
+			{
+				L_Rotate(actionnode);
+				//cout << "RR";
+			}
+			break;
+		}
+		newnode = newnode->parent;
+	}	
+}
+
+void avl_tree::remove_node(int i)
+{
+	/* 1. Perform the normal BST Search iteratively*/
+	if (root == nullptr) return;
+
+	node* node_to_del= nullptr;
+	node *parent = nullptr, *current = root;
+	while (current != nullptr)
+	{
+		if (current->value == i)
+		{
+			node_to_del = current;
+			break;
+		}
+		else if (current->value > i)
+		{
+			current = current->l_child;
+		}
+		else
+		{
+			current = current->r_child;
+		}
+		
+	}
+	// if the node to be deleted is not found, return
+	if (node_to_del == nullptr) return;
+	else
+	{
+		cout << "Node to be deleted found";
+
+		node *temp = nullptr;
+		// if the node to be deleted has only one child or no child
+		if (node_to_del->l_child == nullptr || node_to_del->r_child == nullptr)
+		{
+			temp = node_to_del->l_child ? node_to_del->l_child : node_to_del->r_child;
+
+			// no child case
+			if (temp == nullptr)
+			{
+				// if this is the only node in the tree, return right away
+				if (node_to_del->child == -1)
+				{
+					node_to_del = nullptr;
+					root = nullptr;
+					return;
+				} // no child but leaf node
+				else
+				{
+					node*current_node = node_to_del->parent;
+					node_to_del->parent = nullptr;
+					if (node_to_del->child == 0)
+						current_node->l_child = nullptr;
+					else
+						current_node->r_child = nullptr;
+
+					/* 2. Update height */
+					while (current_node != root->parent)
+					{
+						current_node->height = max(height(current_node->l_child), height(current_node->r_child)) + 1;
+						int pattern = 0;
+						node* actionnode = height_adjustment(current_node, pattern);
+						if (actionnode != nullptr)
+						{
+							if (pattern == 1)
+							{
+								R_Rotate(actionnode);
+								//cout << "LL";
+							}
+							else if (pattern == 2)
+							{
+								L_Rotate(actionnode->l_child);
+								R_Rotate(actionnode);
+								//cout << "LR";
+							}
+							else if (pattern == 3)
+							{
+								R_Rotate(actionnode->r_child);
+								L_Rotate(actionnode);
+								//cout << "RL";
+							}
+							else if (pattern == 4)
+							{
+								L_Rotate(actionnode);
+								//cout << "RR";
+							}
+							break;
+						}
+						current_node = current_node->parent;
+					}
+				}
+
+			}
+			// one child case
+			else
+			{
+				node_to_del->value = temp->value;
+				if (temp->child == 0)
+					temp->parent->l_child = nullptr;
+				else if (temp->child == 1)
+					temp->parent->r_child = nullptr;
+
+				temp = nullptr;
+				node_to_del->height = max(height(node_to_del->l_child), height(node_to_del->r_child))+1;
+				node* current_node = node_to_del;
+				/* 2. Update height */
+				while (current_node != root->parent)
+				{
+					current_node->height = max(height(current_node->l_child), height(current_node->r_child)) + 1;
+					int pattern = 0;
+					node* actionnode = height_adjustment(current_node, pattern);
+					if (actionnode != nullptr)
+					{
+						if (pattern == 1)
+						{
+							R_Rotate(actionnode);
+							//cout << "LL";
+						}
+						else if (pattern == 2)
+						{
+							L_Rotate(actionnode->l_child);
+							R_Rotate(actionnode);
+							//cout << "LR";
+						}
+						else if (pattern == 3)
+						{
+							R_Rotate(actionnode->r_child);
+							L_Rotate(actionnode);
+							//cout << "RL";
+						}
+						else if (pattern == 4)
+						{
+							L_Rotate(actionnode);
+							//cout << "RR";
+						}
+						break;
+					}
+					current_node = current_node->parent;
+				}
+			}
+		}
+		// the node to delete has both the children present, 
+		else
+		{
+			// current node is the node from which imbalance can be encountered
+			node* current_node = replace(node_to_del);
+			/* 2. Update height */
+			while (current_node != root->parent)
+			{
+				current_node->height = max(height(current_node->l_child), height(current_node->r_child)) + 1;
+				int pattern = 0;
+				node* actionnode = height_adjustment(current_node, pattern);
+				if (actionnode != nullptr)
+				{
+					if (pattern == 1)
+					{
+						R_Rotate(actionnode);
+						//cout << "LL";
+					}
+					else if (pattern == 2)
+					{
+						L_Rotate(actionnode->l_child);
+						R_Rotate(actionnode);
+						//cout << "LR";
+					}
+					else if (pattern == 3)
+					{
+						R_Rotate(actionnode->r_child);
+						L_Rotate(actionnode);
+						//cout << "RL";
+					}
+					else if (pattern == 4)
+					{
+						L_Rotate(actionnode);
+						//cout << "RR";
+					}
+					break;
+				}
+				current_node = current_node->parent;
+			}
+		}
+	}
+}
+node* avl_tree::replace(node* node_to_del)
+{
+	node*parent = nullptr;
+ 	if (node_to_del->child != -1)
+		parent = node_to_del->parent;
+	// get the inorder predecessor (largest on the left subtree)
+	node* temp = max_value_node(node_to_del->l_child);
+
+	// copy the inorder predecessor's data to this node
+	node_to_del->value = temp->value;
+	node* node_to_replace_temp = temp->l_child ? temp->l_child : temp->r_child;
+	if (node_to_replace_temp != nullptr)
+	{
+		if (temp->child == 0)
+		{
+			temp->parent->l_child = node_to_replace_temp;
+			node_to_replace_temp->parent = temp->parent;
+			node_to_replace_temp->child = 0;
+		}
+		else if (temp->child == 1)
+		{
+			temp->parent->r_child = node_to_replace_temp;
+			node_to_replace_temp->parent = temp->parent;
+			node_to_replace_temp->child = 1;
+		}
+		temp = nullptr;
+		return node_to_replace_temp;
+	}
+	// no child to the node_to_replace_temp 
+	// (node that will replace node_to_delete is leaf node)
+	else
+	{
+		// the node to be deleted is the root node
+		if (parent == nullptr)
+		{
+			root->value = temp->value;
+			if (temp->child == 0)
+				temp->parent->l_child = nullptr;
+			else
+				temp->parent->r_child = nullptr;
+			temp = nullptr;
+			return root;
+		}
+		else
+		{
+			node* check_height_adj = temp->parent;
+			if (temp->child == 0)
+				temp->parent->l_child = nullptr;
+			else
+				temp->parent->r_child = nullptr;
+			temp = nullptr;
+			check_height_adj->height = max(height(check_height_adj->l_child), height(check_height_adj->r_child)) + 1;
+			return check_height_adj;
+		}
+	}
+
+	
+}
+
+
+node* avl_tree::max_value_node(node* nodeptr)
+{
+	node* current = nodeptr;
+	while (current->r_child != nullptr)
+		current = current->r_child;
+	return current;
+
+}
+
+node* avl_tree::height_adjustment(node* p, int &pattern)
+{
+		int balance = get_balance(p);
+		//cout << " balance : " << balance;
+		// if this node becomes unbalanced, then there are 4 cases
+		if (balance > 1)
+		{
+			if (height(p->l_child->l_child) > height(p->l_child->r_child))
+			{
+				pattern = 1; // LL
+				return p;
+			}
+			else
+			{
+				pattern = 2; // LR
+				return p;
+			}
+		}
+		else if(balance < -1)
+		{
+			
+			if (height(p->r_child->l_child) > height(p->r_child->r_child))
+			{
+				pattern = 3; // RL
+				return p;
+			}
+			else
+			{
+				pattern = 4; // RR
+				return p;
+			}
+		}
+		return nullptr;
+}
+
+void avl_tree::L_Rotate(node *p)
+{
+	// if p is the root node
+	// change the new root 
+	node* parent = nullptr;
+	int child = p->child;
+	if (p->child == -1)
+	{
+		p->r_child->child = -1;
+	}
+	else
+	{
+		// save the root
+		parent = p->parent;
+		
+	}
+	node* newroot = p->r_child;
+	if (newroot->l_child != nullptr)
+	{
+		p->r_child = newroot->l_child;
+		p->r_child->parent = p;
+		p->r_child->child = 1;
+	}
+	else
+	{
+		p->r_child = nullptr;
+	}
+	newroot->l_child = p;
+	p->parent = newroot;
+	p->child = 0;
+	
+
+	p->height = max(height(p->l_child),height(p->r_child))+1;
+	newroot->height = max(height(newroot->l_child), height(newroot->r_child)) + 1;
+	if (newroot->child == -1)
+	{
+		newroot->parent = nullptr;
+		root = newroot;
+	}
+	else
+	{
+		newroot->parent = parent;
+		newroot->child = child;
+		if (child == 0)
+			parent->l_child = newroot;
+		else if (child == 1)
+			parent->r_child = newroot;
+	}
+}
+
+void avl_tree::R_Rotate(node *p)
+{
+
+	// if p is the root node
+	// change the new root 
+	node* parent = nullptr;
+	int child = 0;
+	if (p->child == -1)
+	{
+		p->l_child->child = -1;
+	}
+	else
+	{
+		// save the root
+		parent = p->parent;
+		child = p->child;
+	}
+	node* newroot = p->l_child;
+	if (newroot->r_child != nullptr)
+	{
+		p->l_child = newroot->r_child;
+		p->l_child->parent = p;
+		p->l_child->child = 0;
+	}
+	else
+	{
+		p->l_child = nullptr;
+	}
+	newroot->r_child = p;
+	p->parent = newroot;
+	p->child = 1;
+
+	p->height = max(height(p->l_child), height(p->r_child)) + 1;
+	newroot->height = max(height(newroot->l_child), height(newroot->r_child)) + 1;
+	if (newroot->child == -1)
+	{
+		root = newroot;
+		newroot->parent = nullptr;
+	}
+	else
+	{
+		newroot->parent = parent;
+		newroot->child = child;
+		if (child == 0)
+			parent->l_child = newroot;
+		else if (child == 1)
+			parent->r_child = newroot;
+	}
+
+
+}
+int max(int val1, int val2)
+{
+	if (val1 > val2) return val1;
+	else return val2;
+}
+
+int main() {
+	avl_tree t1;
+/*	
+	cout << "\n adding 45";
+	t1.add_node(45);
+	cout << "\n";
+	t1.remove_node(45);
+	cout << "\n adding 50";
+	t1.add_node(50);
+	cout << "\n adding 47";
+	t1.add_node(47);
+	t1.remove_node(47);
+	t1.in_order_traversal(t1.root);
+	cout << "\n done";
+
+	cout << "\n adding 30";
+	t1.add_node(30);
+	cout << "\n adding 35";
+	t1.add_node(35);
+	cout << "\n";
+	t1.remove_node(35);
+	t1.remove_node(30);
+	t1.remove_node(50); 
+	t1.in_order_traversal(t1.root);
+	
+c	t1.remove_node(10);
+
+	*/
+	t1.add_node(4);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(1);
+	t1.in_order_traversal(t1.root);
+	cout << "\n"; 
+	t1.add_node(3);
+	t1.in_order_traversal(t1.root);
+	cout << "\n"; 
+	t1.add_node(5);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(6);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(2);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(8);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(9);
+	t1.in_order_traversal(t1.root);
+	cout << "\n";
+	t1.add_node(7);
+
+
+	t1.remove_node(2);
+	t1.remove_node(3);
+	t1.remove_node(9);
+	t1.remove_node(6);
+	t1.remove_node(1);
+	t1.remove_node(5);
+	t1.remove_node(8);
+	t1.remove_node(4);
+	t1.remove_node(7);
+	cout << "\n";
+	t1.in_order_traversal(t1.root);
+
+	getchar();
+	getchar();
+	return 0;
+}

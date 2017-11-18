@@ -1,0 +1,339 @@
+// MatrixOperationsUsingLinkedList.cpp : Defines the entry point for the console application.
+//HW2: Sparse Matrix Operation -- Applicaiton of 2-D linked lists  
+//by C-Y (Roger) Chen
+//Due:  11:59pm, Wed. September 27
+//Implement the following three member functions for the class my_matrix:
+//add_node, operator+, operator*
+//Do not change the main function and the my_matrix::print function
+
+#include "stdafx.h"
+#include<iostream>
+#include <vector>
+using namespace std;
+class node {
+public:
+	int value;
+	int r_position;
+	int c_position;
+	node * r_next;
+	node * c_next;
+	node() { value = -9999; r_position = c_position = -1; r_next = c_next = nullptr; }
+	node(int v, int r, int c) { value = v; r_position = r; c_position = c; r_next = c_next = nullptr; }
+
+};
+
+
+class my_matrix {
+public:
+	int num_rows;
+	int num_cols;
+	vector<node *> r_vec;
+	vector<node *> c_vec;
+
+	my_matrix() {}
+	my_matrix(int r, int c);
+	//Initialize a matrix of rows and c cols.
+
+	my_matrix(int r, int c, int n, int k);
+	//Initializa a matrix of r rows, c cols, n nodes, with values randomly in - (k-1) ... (k-1);
+	void print(); //print value, r_position, and c_position of all matrix elements in row-oriented manner
+
+
+	//Implement the following three member functions:
+
+	void add_node(int v, int r, int c);
+	//Create a new node with value v at row r and col c.
+	//If there already exists an element at this position, then just update the node
+	//value at this position to v, and do not create a new node.
+
+	my_matrix operator+(my_matrix M);//matrix addition
+
+	my_matrix operator*(my_matrix M); //matrix multiplication
+	int my_matrix::get_value(int row, int col);
+
+
+};
+
+my_matrix::my_matrix(int r, int c) {
+	num_rows = r;
+	num_cols = c;
+	r_vec.resize(r, nullptr);
+	c_vec.resize(c, nullptr);
+}
+
+
+my_matrix::my_matrix(int r, int c, int n, int k) {
+	num_rows = r;
+	num_cols = c;
+	r_vec.resize(r, nullptr);
+	c_vec.resize(c, nullptr);
+	for (int i = 0; i < n; i++) {
+		int vv = rand() % (2 * k - 1) - (k - 1);
+		int rr = rand() % r;
+		int cc = rand() % c;
+		add_node(vv, rr, cc);
+
+	}
+}
+
+void my_matrix::print() {
+	cout << endl;
+	for (int i = 0; i < num_rows; i++) {
+		node * p = r_vec[i];
+		cout << endl;
+		while (p != nullptr) {
+			cout << p->value << " " << p->r_position << " " << p->c_position << "  ";
+			p = p->r_next;
+		}
+	}
+}
+
+void my_matrix::add_node(int v, int r, int c)
+{	
+	node* current = new node(v,r,c);
+	node* rowptr = r_vec[r];
+	node * tobedeleted = nullptr;
+	// if there is no node in that row
+	if (rowptr == nullptr)
+	{
+		if (v != 0)
+		{
+			r_vec[r] = current;
+		}
+	}
+	// first node is only having same value as before
+	else if (rowptr->c_position == c)
+	{
+
+		if (v == 0)
+		{
+			tobedeleted = r_vec[r];
+			r_vec[r] = tobedeleted->r_next;
+		}
+		else
+		{
+			r_vec[r]->value = v;
+		}
+	}
+		
+	// if the node has to be added at the beginning of list
+	else if (rowptr->c_position > c)
+	{
+		if (v != 0)
+		{
+			current->r_next = rowptr;
+			r_vec[r] = current;
+		}
+
+	}
+	// node has to be added at the random position in betweeen
+	else
+	{
+		node* ptr = r_vec[r];
+		while (ptr->r_next != nullptr)
+		{
+			if (ptr->r_next->c_position < c)
+				ptr = ptr->r_next;
+			else
+				break;
+		}
+		// node has to be added at the end of the list
+		if (ptr->r_next == nullptr)
+		{
+			if (v != 0)
+			{
+
+				ptr->r_next = current;
+			}
+		}
+		// node already exists at that position
+		else if (ptr->r_next->c_position == c)
+		{
+			if (v == 0)
+			{
+				tobedeleted = ptr->r_next;
+				ptr->r_next = ptr->r_next->r_next;
+		
+			}
+			// just update the value
+			else
+			{
+				ptr->r_next->value = v;
+			}
+		}
+		// node has to be inserted in between
+		else
+		{
+			if (v != 0)
+			{
+				current->r_next = ptr->r_next;
+				ptr->r_next = current;
+			}
+		}
+	}
+	// c_vec
+	node* colptr = c_vec[c];
+	// if there is no node in that col
+	if (colptr == nullptr)
+	{
+		if (v != 0)
+		{
+			c_vec[c] = current;
+		}
+	}
+	// first node is only having same value as before
+	else if (colptr->r_position == r)
+	{
+
+		if (v == 0)
+		{
+			tobedeleted = c_vec[c];
+			c_vec[c] = tobedeleted->c_next;
+		}
+		else
+		{
+			c_vec[c]->value = v;
+		}
+	}
+
+	// if the node has to be added at the beginning of list
+	else if (colptr->r_position > r)
+	{
+		if (v != 0)
+		{
+
+			current->c_next = colptr;
+			c_vec[c] = current;
+		}
+
+	}
+	// node has to be added at the random position in betweeen
+	else
+	{
+		node* ptr = c_vec[c];
+		while (ptr->c_next != nullptr)
+		{
+			if (ptr->c_next->r_position < r)
+				ptr = ptr->c_next;
+			else
+				break;
+		}
+		// node has to be added at the end of the list
+		if (ptr->c_next == nullptr)
+		{
+			if (v != 0)
+			{
+
+				ptr->c_next = current;
+			}
+
+		}
+		// node already exists at that position
+		else if (ptr->c_next->r_position == r)
+		{
+			if (v == 0)
+			{
+				tobedeleted = ptr->c_next;
+				ptr->c_next = ptr->c_next->c_next;
+
+			}
+			// just update the value
+			else
+			{
+				ptr->c_next->value = v;
+			}
+		}
+		// node has to be inserted in between
+		else
+		{
+			if (v != 0)
+			{
+				current->c_next = ptr->c_next;
+				ptr->c_next = current;
+			}
+		}
+	}
+	if (tobedeleted!= nullptr)
+		delete tobedeleted;
+
+}
+my_matrix my_matrix :: operator+(my_matrix M)
+{
+	for (int i = 0; i < this->num_rows; i++)
+	{
+		node * ptr1 = this->r_vec[i];
+		node * ptr2 = M.r_vec[i];
+		while (ptr1 != nullptr && ptr2 != nullptr)
+		{
+			if (ptr1->c_position < ptr2->c_position)
+			{
+				M.add_node(ptr1->value, ptr1->r_position, ptr1->c_position);
+				ptr1 = ptr1->r_next;
+			}
+			else if (ptr1->c_position > ptr2->c_position)
+			{
+				ptr2 = ptr2->r_next;
+			}
+			// if the nodes have same row and col position
+			else 
+			{
+				M.add_node(ptr1->value + ptr2->value, ptr1->r_position, ptr1->c_position);
+				ptr1 = ptr1->r_next;
+				ptr2 = ptr2->r_next;
+			}
+		}
+		while (ptr1 != nullptr)
+		{
+			M.add_node(ptr1->value, ptr1->r_position, ptr1->c_position);
+			ptr1 = ptr1->r_next;
+		}
+	}
+	return M;
+}
+
+// helper function to get the value of particular row and column
+int my_matrix::get_value(int row, int col)
+{
+	node* ptr = r_vec[row];
+	while (ptr != nullptr)
+	{
+		if (ptr->c_position == col)
+			return ptr->value;
+		ptr = ptr->r_next;
+	}
+	return 0;
+}
+
+my_matrix my_matrix::operator*(my_matrix M)
+{	
+	my_matrix M3(this->num_rows,M.num_cols);
+	for (int i = 0; i < this->num_rows; i++)
+	{
+		for (int j = 0; j < M.num_cols; j++)
+		{
+			for (int k = 0; k < M.num_rows; k++)
+			{
+				int total = M3.get_value(i,j)+(this->get_value(i,k) * M.get_value(k,j));
+				M3.add_node(total,i,j);
+			}
+		}
+	}
+	
+	return M3;
+}
+
+int main() {
+	
+	my_matrix M1(7, 5, 11, 8), M2(7, 5, 10, 8), M3(7, 5), M4(5, 6, 13, 9), M5(7, 6);
+	M1.print();
+	M2.print();
+	M3 = M1 + M2;
+	M3.print();
+	M1.print();
+	M4.print();
+	M5 = M1 * M4;
+	M5.print();
+	getchar();
+	getchar();
+	return 0;
+}

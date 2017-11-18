@@ -1,0 +1,212 @@
+//Prims algorithm, Syracuse University
+//Implemented with min-Heap
+//Time Complexity O((N + E) log N)
+#include <iostream>
+#include <vector>
+#include <fstream>
+
+using namespace std;
+class e_node{ //stands for edge node
+public:
+	int nb;//the neighbor of a currently considered node
+	int weight; //weight of the edge to the above neighbor
+	e_node() {}//constructor
+};
+class rt_node { //rt stands for routing table
+public:
+	int cost;  //cost to a node
+	int from;  //the from node to this node
+	int checked;
+	int h_pos; //the postion in heap for this node
+	rt_node() { from = -1;  cost = 9999;  checked = 0; }
+};
+
+class h_node { //stands for heap_node
+public:
+	int id;
+	int cost;
+	h_node() { id = -1; cost = 9999; }
+	h_node(int i, int j) { id = i; cost = j; }
+	bool operator<(h_node h) { return (cost < h.cost); }
+};
+
+void set_up(vector<rt_node> &rt, vector<h_node> & heap, int &start); //Insert the souce node to heap and update rt and heap accordingly
+void heap_adjust_up(vector<rt_node> &rt, vector<h_node> & heap, int &n);
+void heap_adjust_down(vector<rt_node> & rt, vector<h_node> & heap);
+void heap_op(vector<vector<e_node>> & graph, vector<rt_node> & rt, vector<h_node> &heap);
+int  remove_min(vector<rt_node> &rt, vector<h_node> &heap);
+int main() {
+
+	ifstream in("text1.txt");
+	int n, e; //n: num of nodes ; e: num of edges
+	in >> n >> e;
+	vector<e_node> ve;
+	vector<vector<e_node> > graph(n, ve);
+	e_node e1,e2;
+	int n1, n2, w;
+	int min_weight = 9999;
+	int start = 0;
+	for (int i = 0; i < e; i++) {
+		in >> n1 >> n2 >> w;
+		e1.nb = n2;
+		e1.weight = w;
+		graph[n1].push_back(e1);
+		e2.nb = n1;
+		e2.weight = w;
+		graph[n2].push_back(e2);
+		if (w < min_weight)
+		{
+			min_weight = w;
+			start = n1;
+		}
+	}
+	in.close();
+	vector<rt_node> rt(n); //rt stands for routing table
+	vector<h_node> heap(n);
+
+	set_up(rt, heap, start);
+	heap_op(graph, rt, heap);
+
+	for (int i = 0; i < n; i++) {
+		cout << "" << rt[i].from << " " << i <<" " << rt[i].cost<< endl;
+	}
+	getchar();
+	getchar();
+	return 0;
+}
+
+
+void set_up(vector<rt_node> &rt, vector<h_node> & heap, int &start) 
+{
+
+	rt[start].from = start;
+	rt[start].cost = 0;
+	for (size_t i = 0; i < heap.size(); i++) {
+		heap[i].id = i;
+		rt[i].h_pos = i;
+	}
+	heap[start].id = 0;
+	heap[0].id = start;
+	heap[0].cost = 0;
+	rt[0].h_pos = start;
+	rt[start].h_pos = 0;
+}
+
+void heap_adjust_down(vector<rt_node> & rt, vector<h_node> & heap)
+{
+	int left_child, right_child, min_index;
+	h_node temp;
+	int current = 0;
+	while (current < heap.size() - 1)
+	{
+		left_child = (current * 2) + 1;
+		right_child = (current * 2) + 2;
+		if (right_child > heap.size() - 1)
+		{
+			if (left_child > heap.size() - 1)
+			{
+				return;
+			}
+			else {
+				min_index = left_child;
+			}
+		}
+		else
+		{
+			min_index = (heap[left_child] < heap[right_child]) ? left_child : right_child;
+		}
+		if (heap[min_index] < heap[current])
+		{
+			// adjust the indexes in heap
+			//update corresponding h_pos in rt
+			temp = heap[min_index];
+			heap[min_index] = heap[current];
+			heap[current] = temp;
+
+			rt[heap[min_index].id].h_pos = min_index;
+			rt[heap[current].id].h_pos = current;
+		}
+		current = min_index;
+	}
+}
+
+void heap_adjust_up(vector<rt_node> & rt, vector<h_node> & heap, int &n)
+{
+	// check the value of the node with its root node
+	// root can be obtained by (pos-1)/2
+	// do this till you dont reach the root node
+	// 0 is the position of root
+	int current = n;
+	while (current > 0)
+	{
+		int parent = (current - 1) / 2;
+		if (heap[current] < heap[parent])
+		{
+			// swap parent and the  the elem at that position in heap
+			h_node temp = heap[current];
+			heap[current] = heap[parent];
+			heap[parent] = temp;
+
+			rt[heap[current].id].h_pos = current;
+			rt[heap[parent].id].h_pos = parent;
+
+			current = parent;
+		}
+		else
+		{
+			break;
+		}
+	}
+}
+
+void heap_op(vector<vector<e_node>> & graph, vector<rt_node> & rt, vector<h_node> &heap)
+{
+	// for all vertices
+	while(heap.size() > 0)
+	{
+		// pick the minimum from the set of vertices nt yet processed
+		int min_index = remove_min(rt, heap);
+		if (heap.size() == 0)
+				break;
+		rt[min_index].checked = 1;
+		//int optimal = rt[min_index].cost;
+		// visit all the edges that come from it, if it is not checked
+		std::vector<e_node>::iterator it;
+		for (it = graph[min_index].begin(); it != graph[min_index].end(); it++)
+		{
+			e_node node = *it;
+			if (rt[node.nb].checked == 0)
+			{
+				// update the cost if current cost is lt cost in rt 
+				if (rt[node.nb].cost >  node.weight)
+				{
+					rt[node.nb].cost = node.weight;
+					heap[rt[node.nb].h_pos].cost = node.weight;
+					heap_adjust_up(rt, heap, rt[node.nb].h_pos);
+					rt[node.nb].from = min_index;
+				}
+			}
+		}
+	}
+}
+
+int remove_min(vector<rt_node>&rt, vector<h_node> & heap)
+{
+	int ret_node;
+	if (heap.size() == 0) {
+		ret_node = 9999;
+	}
+	else
+	{
+		// replace the root with the lastnode 
+		ret_node = heap[0].id;
+		heap[0] = heap[heap.size() - 1];
+		//update rt's h_pos to heap[0] index's index  to 0
+		rt[heap[0].id].h_pos = 0;
+		// reduce the size of heap by 1
+		heap.pop_back();
+		if (heap.size() > 0)
+			heap_adjust_down(rt, heap);
+	}
+	return ret_node;
+}
